@@ -1,4 +1,7 @@
+
+using BlueKnightOne.Ships.ShipResources;
 using BlueKnightOne.Ships.ShipSystems;
+using BlueKnightOne.Utilities;
 using Godot;
 
 namespace BlueKnightOne.Ships.ShipComponents
@@ -7,15 +10,28 @@ namespace BlueKnightOne.Ships.ShipComponents
     {
 
         #region Godot Signals
-        
+
         [Signal] public delegate void ComponentActivated();
         [Signal] public delegate void ComponentDeactivated();
         [Signal] public delegate void ComponentDestroyed();
+        [Signal] public delegate void ResourceConsumed(ShipConsumableResource resource, float amount);
+
+        #endregion
+
+        #region Inspector Variables
+        [ExportFlagsEnum(typeof(ShipComponentType))] private short componentType;
+        [Export] private Resource acceptedResources;
 
         #endregion
 
         #region Instance Variables
         private IShipSystem connectedSystem;
+
+        public ShipComponentType ComponentType 
+        {
+            get => (ShipComponentType)componentType;
+            set => componentType = (short)value;
+        }
 
         #endregion
 
@@ -24,28 +40,28 @@ namespace BlueKnightOne.Ships.ShipComponents
         public override void _Ready()
         {
             GetConnectedSystem();
+            Initialize();
         }
 
         private void GetConnectedSystem()
         {
             connectedSystem = GetParent<IShipSystem>();
-            
+
             if (connectedSystem is null)
             {
                 GD.PushError($"{Name} must be the child of an IShipSystem.");
                 return;
             }
-
-            
         }
 
         public override void _Process(float delta)
         {
-            // Simply 
+            
         }
-        
+
         #endregion
 
+        #region Public Methods
         public void Initialize()
         {
             throw new System.NotImplementedException();
@@ -65,6 +81,10 @@ namespace BlueKnightOne.Ships.ShipComponents
         {
             throw new System.NotImplementedException();
         }
+        #endregion
 
+        #region Private Methods
+            
+        #endregion
     }
 }

@@ -1,5 +1,6 @@
 // Copyright 2020 kleonc - https://gist.github.com/kleonc
 // Source: https://gist.github.com/kleonc/a2bab51686ac6f4d7cb28aec88efa5d9
+// Usage: https://www.reddit.com/r/godot/comments/gqpduq/c_how_to_export_a_flags_enum/
 
 using System;
 using System.Collections.Generic;
