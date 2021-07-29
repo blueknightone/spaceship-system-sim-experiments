@@ -2,16 +2,26 @@
 Author: Justin Abbott (lastmilegames@gmail.com)
 Desc: Represents a electrical power storage device.
 Created:  2021-07-28T18:28:31.536Z
-Modified: 2021-07-28T21:14:21.979Z
+Modified: 2021-07-29T22:03:14.771Z
 */
 using BlueKnightOne.Ships.ShipResources;
 using BlueKnightOne.Ships.ShipSystems;
+
 namespace BlueKnightOne.Ships.ShipComponents
 {
     public interface IShipComponent
     {
+        #region Properties
+        
+        bool IsActive { get; }
+
+        #endregion
+
         #region Methods
-        void Initialize(IShipSystem parentSystem);
+
+        void Initialize();
+        void ActivateComponent();
+        void DeactivateComponent();
         void ProcessResources();
         void SetParentSystem(IShipSystem parentSystem);
         float GetResourceFromInternalStorage(ShipConsumableResource resource);

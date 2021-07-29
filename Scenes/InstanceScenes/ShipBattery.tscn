@@ -1,0 +1,17 @@
+[gd_scene load_steps=5 format=2]
+
+[ext_resource path="res://GameData/ShipBuffers/res_12vACBattery.res" type="Resource" id=1]
+[ext_resource path="res://GameData/ComponentEfficienty/12vBatteryEffeciency.res" type="Resource" id=2]
+[ext_resource path="res://GameData/ShipConsumables/res_12vAC.res" type="Resource" id=3]
+[ext_resource path="res://Scripts/Ships/ShipComponents/ShipComponent.cs" type="Script" id=4]
+
+[node name="Battery" type="Node"]
+script = ExtResource( 4 )
+startingState = 6
+incomingResources = [ ExtResource( 3 ) ]
+outgoingResources = [ ExtResource( 3 ) ]
+internalStorageBuffers = [ ExtResource( 1 ) ]
+componentEfficiency = ExtResource( 2 )
+
+[node name="WearTimer" type="Timer" parent="."]
+process_mode = 0

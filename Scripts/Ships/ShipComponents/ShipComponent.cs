@@ -2,14 +2,21 @@
 using System.Collections.Generic;
 using BlueKnightOne.Ships.ShipResources;
 using BlueKnightOne.Ships.ShipSystems;
-using BlueKnightOne.Utilities;
 using Godot;
 
 namespace BlueKnightOne.Ships.ShipComponents
 {
-    public abstract class BaseShipComponent : Node, IShipComponent
+    public class ShipComponent : Node, IShipComponent
     {
+        #region Public Properties
+        public bool IsActive => throw new System.NotImplementedException();
+
+        #endregion
+
         #region Insepctor Variables
+
+        [Export] private ShipComponentState startingState = ShipComponentState.None;
+
         /// <summary>
         ///     A list of <code>ShipConsumableResource</code>s that can be sent to this component
         /// </summary>
@@ -21,9 +28,13 @@ namespace BlueKnightOne.Ships.ShipComponents
         [Export] private List<ShipConsumableResource> outgoingResources;
 
         /// <summary>
-        ///     A list 
+        ///     A list of internal buffers (tubes, tanks, wires, etc.)
         /// </summary>
-        [Export] private List<float> incoming;
+        [Export] private List<ResourceStorageBuffer> internalStorageBuffers;
+
+        [Export] private ComponentEfficiency componentEfficiency;
+
+        [Export] private NodePath componentWearNodePath;
 
         #endregion
 
@@ -34,7 +45,25 @@ namespace BlueKnightOne.Ships.ShipComponents
         /// </summary>
         private IShipSystem parentSystem;
 
+        private ShipComponentState currentState;
+
         private Dictionary<ShipConsumableResource, float> internalStorage;
+
+        private ComponentWear componentWearTimer;
+
+        #endregion
+
+        #region Godot Lifecycle Events
+
+        public override void _Ready()
+        {
+            currentState = startingState;
+            componentWearTimer = GetNode<ComponentWear>(componentWearNodePath);
+        }
+
+        #endregion
+
+        #region Public Methods
 
         public void AddResourceToInternalStorage(ShipConsumableResource resource, float amount)
         {
@@ -51,7 +80,7 @@ namespace BlueKnightOne.Ships.ShipComponents
             throw new System.NotImplementedException();
         }
 
-        public void Initialize(IShipSystem parentSystem)
+        public void Initialize()
         {
             throw new System.NotImplementedException();
         }
@@ -63,8 +92,34 @@ namespace BlueKnightOne.Ships.ShipComponents
 
         public void SetParentSystem(IShipSystem parentSystem)
         {
-            throw new System.NotImplementedException();
+            this.parentSystem = parentSystem;
         }
+
+        public void ActivateComponent()
+        {
+            if ((currentState & ShipComponentState.Inactive) != 0)
+            {
+                // Unset the inactive bit
+                currentState &= ~ShipComponentState.Inactive;
+            }
+            //Set the active bit
+            currentState |= ShipComponentState.Active;
+        }
+
+        public void DeactivateComponent()
+        {
+            if ((currentState & ShipComponentState.Active) != 0)
+            {
+                // Unset the Active state bit
+                currentState &= ~ShipComponentState.Active;
+            }
+            //Set the Inactive state bit.
+            currentState |= ShipComponentState.Inactive;
+        }
+
+        #endregion
+
+        #region PrivateMethods
 
         #endregion
     }
