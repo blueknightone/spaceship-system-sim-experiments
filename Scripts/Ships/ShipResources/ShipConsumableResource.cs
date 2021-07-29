@@ -2,7 +2,7 @@
 Author: Justin Abbott (lastmilegames@gmail.com)
 Desc: Represents a electrical power storage device.
 Created:  2021-07-28T18:28:31.536Z
-Modified: 2021-07-28T21:40:34.496Z
+Modified: 2021-07-28T23:34:41.719Z
 */
 
 using System;
@@ -13,7 +13,7 @@ namespace BlueKnightOne.Ships.ShipResources
 {
     public class ShipConsumableResource : Resource
     {
-
+        [Export]    
         public string GUID { get; private set; }
 
         [Export]

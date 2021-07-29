@@ -1,4 +1,5 @@
 
+using System.Collections.Generic;
 using BlueKnightOne.Ships.ShipResources;
 using BlueKnightOne.Ships.ShipSystems;
 using BlueKnightOne.Utilities;
@@ -8,83 +9,63 @@ namespace BlueKnightOne.Ships.ShipComponents
 {
     public abstract class BaseShipComponent : Node, IShipComponent
     {
+        #region Insepctor Variables
+        /// <summary>
+        ///     A list of <code>ShipConsumableResource</code>s that can be sent to this component
+        /// </summary>
+        [Export] private List<ShipConsumableResource> incomingResources;
 
-        #region Godot Signals
+        /// <summary>
+        ///     A list of <code>ShipConsumableResource</code>s that this component sends out
+        /// </summary>
+        [Export] private List<ShipConsumableResource> outgoingResources;
 
-        [Signal] public delegate void ComponentActivated();
-        [Signal] public delegate void ComponentDeactivated();
-        [Signal] public delegate void ComponentDestroyed();
-        [Signal] public delegate void ResourceConsumed(ShipConsumableResource resource, float amount);
-
-        #endregion
-
-        #region Inspector Variables
-        [ExportFlagsEnum(typeof(ShipComponentType))] private short componentType;
-        [Export] private Resource acceptedResources;
-
-        #endregion
-
-        #region Instance Variables
-        private IShipSystem connectedSystem;
-
-        public ShipComponentType ComponentType 
-        {
-            get => (ShipComponentType)componentType;
-            set => componentType = (short)value;
-        }
+        /// <summary>
+        ///     A list 
+        /// </summary>
+        [Export] private List<float> incoming;
 
         #endregion
 
-        #region Godot Events
+        #region Member Variables
 
-        public override void _Ready()
-        {
-            GetConnectedSystem();
-            Initialize();
-        }
+        /// <summary>
+        ///     References the <code>IShipSystem</code> that the component is attached to.
+        /// </summary>
+        private IShipSystem parentSystem;
 
-        private void GetConnectedSystem()
-        {
-            connectedSystem = GetParent<IShipSystem>();
+        private Dictionary<ShipConsumableResource, float> internalStorage;
 
-            if (connectedSystem is null)
-            {
-                GD.PushError($"{Name} must be the child of an IShipSystem.");
-                return;
-            }
-        }
-
-        public override void _Process(float delta)
-        {
-            
-        }
-
-        #endregion
-
-        #region Public Methods
-        public void Initialize()
+        public void AddResourceToInternalStorage(ShipConsumableResource resource, float amount)
         {
             throw new System.NotImplementedException();
         }
 
-        public void OnActivateComponent()
+        public float CheckForResourceAvailable(ShipConsumableResource resource, float amountRequested = 0)
         {
             throw new System.NotImplementedException();
         }
 
-        public void OnDeactivateComponent()
+        public float GetResourceFromInternalStorage(ShipConsumableResource resource)
         {
             throw new System.NotImplementedException();
         }
 
-        public void OnDestroyComponent()
+        public void Initialize(IShipSystem parentSystem)
         {
             throw new System.NotImplementedException();
         }
-        #endregion
 
-        #region Private Methods
-            
+        public void ProcessResources()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public void SetParentSystem(IShipSystem parentSystem)
+        {
+            throw new System.NotImplementedException();
+        }
+
         #endregion
     }
 }

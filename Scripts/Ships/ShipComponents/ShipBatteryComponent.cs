@@ -9,9 +9,6 @@ namespace BlueKnightOne.Ships.ShipComponents
 {
     public class ShipBatteryComponent : BaseShipComponent
     {
-        public ShipBatteryComponent()
-        {
-            ComponentType = ShipComponentType.ResourceStorage;
-        }
+        
     }
 }
