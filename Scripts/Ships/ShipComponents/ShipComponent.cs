@@ -117,6 +117,19 @@ namespace BlueKnightOne.Ships.ShipComponents
             currentState |= ShipComponentState.Inactive;
         }
 
+        public void ToggleComponent()
+        {
+            // If the current state is Inactive, activate the component.
+            if ((currentState & ShipComponentState.Inactive) != 0)
+            {
+                ActivateComponent();
+            }
+            else
+            {
+                DeactivateComponent();
+            }
+        }
+
         #endregion
 
         #region PrivateMethods

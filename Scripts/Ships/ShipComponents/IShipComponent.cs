@@ -22,6 +22,7 @@ namespace BlueKnightOne.Ships.ShipComponents
         void Initialize();
         void ActivateComponent();
         void DeactivateComponent();
+        void ToggleComponent();
         void ProcessResources();
         void SetParentSystem(IShipSystem parentSystem);
         float GetResourceFromInternalStorage(ShipConsumableResource resource);
