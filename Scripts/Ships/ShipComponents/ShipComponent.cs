@@ -2,20 +2,37 @@
 using System.Collections.Generic;
 using BlueKnightOne.Ships.ShipResources;
 using BlueKnightOne.Ships.ShipSystems;
+using BlueKnightOne.Utilities;
 using Godot;
 
 namespace BlueKnightOne.Ships.ShipComponents
 {
     public class ShipComponent : Node, IShipComponent
     {
+        #region Godot Signals
+
+        [Signal] public delegate void ComponentActivated();
+        [Signal] public delegate void ComponentDeactivated();
+        [Signal] public delegate void ComponentDestroyed();
+
+        #endregion
+
         #region Public Properties
-        public bool IsActive => throw new System.NotImplementedException();
+
+        /// <summary>
+        ///     Component is active when the ShipComponentState.Active flag is on and Inoperable flags are off.
+        /// </summary>
+        public bool IsActive => (CurrentState & ShipComponentState.Active ) != 0
+                                && (CurrentState & ShipComponentState.Inoperable) == 0;
+
+        public ShipComponentState CurrentState { get; private set; }
 
         #endregion
 
         #region Insepctor Variables
 
-        [Export] private ShipComponentState startingState = ShipComponentState.None;
+        [Export] 
+        private ShipComponentState startingState = ShipComponentState.None;
 
         /// <summary>
         ///     A list of <code>ShipConsumableResource</code>s that can be sent to this component
@@ -45,11 +62,7 @@ namespace BlueKnightOne.Ships.ShipComponents
         /// </summary>
         private IShipSystem parentSystem;
 
-        private ShipComponentState currentState;
-
-        private Dictionary<ShipConsumableResource, float> internalStorage;
-
-        private ComponentWear componentWearTimer;
+        private ComponentWearTimer componentWearTimer;
 
         #endregion
 
@@ -57,32 +70,95 @@ namespace BlueKnightOne.Ships.ShipComponents
 
         public override void _Ready()
         {
-            currentState = startingState;
-            componentWearTimer = GetNode<ComponentWear>(componentWearNodePath);
+            if (startingState == ShipComponentState.None)
+            {
+                GD.PushError($"{Name} starting state cannot be \"None\".");
+            }
+            else
+            {
+                CurrentState = startingState;
+            }
+            
+            componentWearTimer = GetChild<ComponentWearTimer>(0);
+            if (componentWearTimer is null)
+            {
+                GD.PushError($"{Name} must have a ComponentWearTimer.");
+            }
         }
 
         #endregion
 
         #region Public Methods
 
-        public void AddResourceToInternalStorage(ShipConsumableResource resource, float amount)
+        public bool CheckForResourceAvailable(ShipConsumableResource resource, float amountRequested = 0f)
         {
-            throw new System.NotImplementedException();
+            float totalAmountAvaialable = 0f;
+
+            foreach (ResourceStorageBuffer buffer in internalStorageBuffers)
+            {
+                if (buffer.AcceptedResource != resource) continue;
+                
+                totalAmountAvaialable += buffer.CurrentAmountStored;
+
+                // Stop iterating through buffers if we found enough.
+                if (totalAmountAvaialable > amountRequested) return true;
+            }
+
+            return false;
         }
 
-        public float CheckForResourceAvailable(ShipConsumableResource resource, float amountRequested = 0)
+        public float AddResourceToInternalStorage(ShipConsumableResource resource, float amountRequested)
         {
-            throw new System.NotImplementedException();
+            if (incomingResources.Contains(resource))
+            {
+                return SendToInternalStorage(resource, amountRequested);
+            }
+
+            return amountRequested;
         }
 
-        public float GetResourceFromInternalStorage(ShipConsumableResource resource)
+        private float SendToInternalStorage(ShipConsumableResource resource, float amountRequested)
         {
-            throw new System.NotImplementedException();
+            float amountRemaining = amountRequested;
+            
+            foreach (ResourceStorageBuffer buffer in internalStorageBuffers)
+            {
+                if (buffer.AcceptedResource != resource) continue;
+
+                amountRemaining = buffer.AddToBuffer(amountRemaining);
+
+                if (amountRemaining.Approximately(0f)) return 0f;
+            }
+
+            return amountRemaining;
         }
 
-        public void Initialize()
+        public float GetResourceFromInternalStorage(ShipConsumableResource resource, float amountRequested)
         {
-            throw new System.NotImplementedException();
+            if (outgoingResources.Contains(resource))
+            {
+                return RetrieveFromInternalStorage(resource, amountRequested);
+            }
+
+            return amountRequested;
+        }
+
+        private float RetrieveFromInternalStorage(ShipConsumableResource resource, float amountRequested)
+        {
+            float requestedAmountRemaining = amountRequested;
+            float amountRetrieved = 0f;
+
+            foreach (ResourceStorageBuffer buffer in internalStorageBuffers)
+            {
+                if (buffer.AcceptedResource != resource) continue;
+
+                amountRetrieved += buffer.RemoveFromBuffer(requestedAmountRemaining);
+
+                // If we're close enough to the requested amount, quit out early.
+                if (amountRetrieved.Approximately(amountRequested)) return amountRetrieved;
+            }
+
+            return amountRetrieved;
         }
 
         public void ProcessResources()
@@ -90,37 +166,38 @@ namespace BlueKnightOne.Ships.ShipComponents
             throw new System.NotImplementedException();
         }
 
-        public void SetParentSystem(IShipSystem parentSystem)
-        {
-            this.parentSystem = parentSystem;
-        }
-
         public void ActivateComponent()
         {
-            if ((currentState & ShipComponentState.Inactive) != 0)
+            // TODO: Check can activate.
+
+            if ((CurrentState & ShipComponentState.Inactive) != 0)
             {
                 // Unset the inactive bit
-                currentState &= ~ShipComponentState.Inactive;
+                CurrentState &= ~ShipComponentState.Inactive;
             }
             //Set the active bit
-            currentState |= ShipComponentState.Active;
+            CurrentState |= ShipComponentState.Active;
+
+            componentWearTimer.Start();
         }
 
         public void DeactivateComponent()
         {
-            if ((currentState & ShipComponentState.Active) != 0)
+            if ((CurrentState & ShipComponentState.Active) != 0)
             {
                 // Unset the Active state bit
-                currentState &= ~ShipComponentState.Active;
+                CurrentState &= ~ShipComponentState.Active;
             }
             //Set the Inactive state bit.
-            currentState |= ShipComponentState.Inactive;
+            CurrentState |= ShipComponentState.Inactive;
+
+            componentWearTimer.Stop();
         }
 
         public void ToggleComponent()
         {
             // If the current state is Inactive, activate the component.
-            if ((currentState & ShipComponentState.Inactive) != 0)
+            if ((CurrentState & ShipComponentState.Inactive) != 0)
             {
                 ActivateComponent();
             }

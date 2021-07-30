@@ -22,7 +22,13 @@ namespace BlueKnightOne.Ships.ShipComponents
         Destroyed = 1 << 4,
         Missing = 1 << 5,
         Disabled = 1 << 6,
+        /// <summary>
+        ///     When activated, component produces more of a resource at the cost of additional where.
+        /// </summary>
         Overclock = 1 << 7,
+        /// <summary>
+        ///     Can't be activated.
+        /// </summary>
         Inoperable = Destroyed | Missing | Disabled
     }
 }

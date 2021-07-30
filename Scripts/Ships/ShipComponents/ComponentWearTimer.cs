@@ -2,14 +2,14 @@
 Author: Justin Abbott (lastmilegames@gmail.com)
 Desc: Stores and calculates the wear over time of a component.
 Created:  2021-07-29T21:07:03.461Z
-Modified: 2021-07-29T21:07:20.552Z
+Modified: 2021-07-29T23:36:07.989Z
 */
 
 using Godot;
 
 namespace BlueKnightOne.Ships.ShipComponents
 {
-    public class ComponentWear : Timer
+    public class ComponentWearTimer : Timer
     {
         [Export] private float startingWear;
         [Export] private float WearRatePerSecond;
@@ -23,9 +23,10 @@ namespace BlueKnightOne.Ships.ShipComponents
         /// <summary>
         ///     Updates the current wear value.
         /// </summary>
-        public void ApplyWear() 
+        /// <param name="amount">Amount to set as current wear level.</param>
+        public void SetWearLevel(float amount)
         {
-            currentWear += WearRatePerSecond;
+            currentWear = amount;
         }
 
         public ShipComponentState GetWearState(ShipComponentState currentState)
@@ -38,9 +39,9 @@ namespace BlueKnightOne.Ships.ShipComponents
             }
             else if (currentWear >= DamagedStateThreshold)
             {
-                return ShipComponentState.Damaged 
+                return ShipComponentState.Damaged
                         | (
-                            currentState 
+                            currentState
                             & (ShipComponentState.Active | ShipComponentState.Inactive | ShipComponentState.Disabled)
                         );
             }
@@ -48,7 +49,7 @@ namespace BlueKnightOne.Ships.ShipComponents
             {
                 return ShipComponentState.Worn
                         | (
-                            currentState 
+                            currentState
                             & (ShipComponentState.Active | ShipComponentState.Inactive | ShipComponentState.Disabled)
                         );
             }
@@ -68,7 +69,15 @@ namespace BlueKnightOne.Ships.ShipComponents
 
         public void OnComponentWearTimeout()
         {
-            ApplyWear();
+            UpdateWear();
+        }
+
+         /// <summary>
+        ///     Updates the current wear value.
+        /// </summary>
+        private void UpdateWear() 
+        {
+            currentWear += WearRatePerSecond;
         }
     }
 }

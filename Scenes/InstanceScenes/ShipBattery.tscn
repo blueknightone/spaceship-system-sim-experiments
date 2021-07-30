@@ -8,7 +8,7 @@
 
 [node name="Battery" type="Node"]
 script = ExtResource( 4 )
-startingState = 6
+startingState = 1
 incomingResources = [ ExtResource( 3 ) ]
 outgoingResources = [ ExtResource( 3 ) ]
 internalStorageBuffers = [ ExtResource( 1 ) ]
@@ -18,4 +18,9 @@ componentWearNodePath = NodePath("ComponentWear")
 [node name="ComponentWear" type="Timer" parent="."]
 process_mode = 0
 script = ExtResource( 5 )
+startingWear = null
+WearRatePerSecond = null
+WornStateThreshold = null
+DamagedStateThreshold = null
+DestroyedStateThreshold = null
 [connection signal="timeout" from="ComponentWear" to="ComponentWear" method="OnComponentWearTimeout"]
