@@ -11,9 +11,7 @@ namespace BlueKnightOne.Ships.ShipComponents
     {
         #region Godot Signals
 
-        [Signal] public delegate void ComponentActivated();
-        [Signal] public delegate void ComponentDeactivated();
-        [Signal] public delegate void ComponentDestroyed();
+        [Signal] public delegate void ComponentStateChanged(ShipComponentState state);
 
         #endregion
 
@@ -22,7 +20,7 @@ namespace BlueKnightOne.Ships.ShipComponents
         /// <summary>
         ///     Component is active when the ShipComponentState.Active flag is on and Inoperable flags are off.
         /// </summary>
-        public bool IsActive => (CurrentState & ShipComponentState.Active ) != 0
+        public bool IsActive => (CurrentState & ShipComponentState.Active) != 0
                                 && (CurrentState & ShipComponentState.Inoperable) == 0;
 
         public ShipComponentState CurrentState { get; private set; }
@@ -31,27 +29,20 @@ namespace BlueKnightOne.Ships.ShipComponents
 
         #region Insepctor Variables
 
-        [Export] 
-        private ShipComponentState startingState = ShipComponentState.None;
+        [Export]
+        private ShipComponentState startingState = ShipComponentState.Inactive;
+
+
+        // TODO: Refactor incoming, outgoing, and internal buffers into ResourceStorageBuffer. Includ burn rate.
 
         /// <summary>
-        ///     A list of <code>ShipConsumableResource</code>s that can be sent to this component
+        ///     All the internal storage vessels of the component.
         /// </summary>
-        [Export] private List<ShipConsumableResource> incomingResources;
-
-        /// <summary>
-        ///     A list of <code>ShipConsumableResource</code>s that this component sends out
-        /// </summary>
-        [Export] private List<ShipConsumableResource> outgoingResources;
-
-        /// <summary>
-        ///     A list of internal buffers (tubes, tanks, wires, etc.)
-        /// </summary>
-        [Export] private List<ResourceStorageBuffer> internalStorageBuffers;
+        [Export] private List<ShipConsumableStorage> internalStorages;
 
         [Export] private ComponentEfficiency componentEfficiency;
 
-        [Export] private NodePath componentWearNodePath;
+        [Export] private ComponentWear componentWear;
 
         #endregion
 
@@ -62,7 +53,8 @@ namespace BlueKnightOne.Ships.ShipComponents
         /// </summary>
         private IShipSystem parentSystem;
 
-        private ComponentWearTimer componentWearTimer;
+        private Timer componentFunctionTimer;
+
 
         #endregion
 
@@ -78,54 +70,70 @@ namespace BlueKnightOne.Ships.ShipComponents
             {
                 CurrentState = startingState;
             }
-            
-            componentWearTimer = GetChild<ComponentWearTimer>(0);
-            if (componentWearTimer is null)
+
+            componentFunctionTimer = GetChild<Timer>(0);
+            if (componentFunctionTimer is null)
             {
                 GD.PushError($"{Name} must have a ComponentWearTimer.");
             }
+        }
+
+        public override void _Process(float delta)
+        {
+            ProcessState();
+            if (!IsActive) return;
+
+            ProcessWear();
+            ProcessResources();
         }
 
         #endregion
 
         #region Public Methods
 
-        public bool CheckForResourceAvailable(ShipConsumableResource resource, float amountRequested = 0f)
+        public void SetComponentState(ShipComponentState nextState, bool overwriteState)
+        {
+            if (overwriteState)
+            {
+                CurrentState = nextState;
+                return;
+            }
+
+            ShipComponentState newState = CurrentState | nextState;
+        }
+
+        /// <summary>
+        ///     Checks if the component has enough of a given resource in its internal storage.
+        /// </summary>
+        /// <param name="resource">The resource to search for.</param>
+        /// <param name="amountRequested">The amount of the resource desired.</param>
+        /// <returns>Returns true if the amount of the requested resource is available.</returns>
+        public bool CheckResourceAvailability(ShipConsumableResource resource, float amountRequested = 0f)
         {
             float totalAmountAvaialable = 0f;
 
-            foreach (ResourceStorageBuffer buffer in internalStorageBuffers)
+            foreach (ShipConsumableStorage storage in internalStorages)
             {
-                if (buffer.AcceptedResource != resource) continue;
-                
-                totalAmountAvaialable += buffer.CurrentAmountStored;
+                if (storage.AcceptedResource != resource) continue;
 
-                // Stop iterating through buffers if we found enough.
+                totalAmountAvaialable += storage.CurrentAmountStored;
+
+                // Stop iterating through storages if we found enough.
                 if (totalAmountAvaialable > amountRequested) return true;
             }
 
             return false;
         }
 
-        public float AddResourceToInternalStorage(ShipConsumableResource resource, float amountRequested)
-        {
-            if (incomingResources.Contains(resource))
-            {
-                return SendToInternalStorage(resource, amountRequested);
-            }
-
-            return amountRequested;
-        }
-
-        private float SendToInternalStorage(ShipConsumableResource resource, float amountRequested)
+        public float AddResource(ShipConsumableResource resource, float amountRequested)
         {
             float amountRemaining = amountRequested;
-            
-            foreach (ResourceStorageBuffer buffer in internalStorageBuffers)
+
+            foreach (ShipConsumableStorage buffer in internalStorages)
             {
                 if (buffer.AcceptedResource != resource) continue;
 
-                amountRemaining = buffer.AddToBuffer(amountRemaining);
+                amountRemaining = buffer.AddToStorage(amountRemaining);
 
                 if (amountRemaining.Approximately(0f)) return 0f;
             }
@@ -133,26 +141,16 @@ namespace BlueKnightOne.Ships.ShipComponents
             return amountRemaining;
         }
 
-        public float GetResourceFromInternalStorage(ShipConsumableResource resource, float amountRequested)
-        {
-            if (outgoingResources.Contains(resource))
-            {
-                return RetrieveFromInternalStorage(resource, amountRequested);
-            }
-
-            return amountRequested;
-        }
-
-        private float RetrieveFromInternalStorage(ShipConsumableResource resource, float amountRequested)
+        public float GetResource(ShipConsumableResource resource, float amountRequested)
         {
             float requestedAmountRemaining = amountRequested;
             float amountRetrieved = 0f;
 
-            foreach (ResourceStorageBuffer buffer in internalStorageBuffers)
+            foreach (ShipConsumableStorage buffer in internalStorages)
             {
                 if (buffer.AcceptedResource != resource) continue;
 
-                amountRetrieved += buffer.RemoveFromBuffer(requestedAmountRemaining);
+                amountRetrieved += buffer.RemoveFromStorage(requestedAmountRemaining);
 
                 // If we're close enough to the requested amount, quit out early.
                 if (amountRetrieved.Approximately(amountRequested)) return amountRetrieved;
@@ -161,55 +159,130 @@ namespace BlueKnightOne.Ships.ShipComponents
             return amountRetrieved;
         }
 
-        public void ProcessResources()
+        public void Activate()
         {
-            throw new System.NotImplementedException();
-        }
+            // If component is in any inoperable state, it cannot be activated.
+            if ((CurrentState & ShipComponentState.Inoperable) != 0) return;
 
-        public void ActivateComponent()
-        {
-            // TODO: Check can activate.
+            // Unset the inactive bit
+            CurrentState &= ~ShipComponentState.Inactive;
 
-            if ((CurrentState & ShipComponentState.Inactive) != 0)
-            {
-                // Unset the inactive bit
-                CurrentState &= ~ShipComponentState.Inactive;
-            }
             //Set the active bit
             CurrentState |= ShipComponentState.Active;
 
-            componentWearTimer.Start();
+            componentFunctionTimer.Start();
+            EmitSignal(nameof(ComponentStateChanged), CurrentState);
         }
 
-        public void DeactivateComponent()
+        public void Deactivate()
         {
-            if ((CurrentState & ShipComponentState.Active) != 0)
-            {
-                // Unset the Active state bit
-                CurrentState &= ~ShipComponentState.Active;
-            }
+            // Unset the Active state bit
+            CurrentState &= ~ShipComponentState.Active;
+
             //Set the Inactive state bit.
             CurrentState |= ShipComponentState.Inactive;
 
-            componentWearTimer.Stop();
+            componentFunctionTimer.Stop();
+            EmitSignal(nameof(ComponentStateChanged), CurrentState);
         }
 
-        public void ToggleComponent()
+        public void Toggle()
         {
             // If the current state is Inactive, activate the component.
-            if ((CurrentState & ShipComponentState.Inactive) != 0)
+            if (CurrentState.HasFlag(ShipComponentState.Inactive))
             {
-                ActivateComponent();
+                Activate();
             }
             else
             {
-                DeactivateComponent();
+                Deactivate();
+            }
+        }
+
+        public void Damage(float wearAmount)
+        {
+            componentWear.AddWear(wearAmount);
+            ProcessWear();
+        }
+
+        public void Destroy()
+        {
+            CurrentState |= ShipComponentState.Active;
+            CurrentState &= ShipComponentState.Destroyed;
+            EmitSignal(nameof(ComponentStateChanged), CurrentState);
+        }
+
+        public void Remove()
+        {
+            CurrentState = ShipComponentState.Inactive | ShipComponentState.Uninstalled;
+
+            EmitSignal(nameof(ComponentStateChanged), CurrentState);
+        }
+
+        public void Install()
+        {
+            // If the copmonent was marked uninstalled (which it should be if it is not 
+            //in a component socket), unset the Uninstalled state flag.
+            if (CurrentState.HasFlag(ShipComponentState.Uninstalled))
+            {
+                CurrentState &= ~ShipComponentState.Uninstalled;
+            }
+
+            // Make sure that the component is not flagged as active (which it shouldn't be already).
+            CurrentState &= ~ShipComponentState.Active;
+
+            // Make sure the Inactive flag is set.
+            CurrentState |= ShipComponentState.Inactive;
+
+            EmitSignal(nameof(ComponentStateChanged), CurrentState);
+        }
+
+        public void ToggleOverclock()
+        {
+            if (CurrentState.HasFlag(ShipComponentState.Overclock))
+            {
+                CurrentState &= ~ShipComponentState.Overclock;
+            }
+            else
+            {
+                CurrentState |= ShipComponentState.Overclock;
             }
         }
 
         #endregion
 
-        #region PrivateMethods
+        #region Private Methods
+
+        private void ProcessState()
+        {
+            // If the current state is inoperbable, then we don't need to do anything.
+            if (CurrentState.HasFlag(ShipComponentState.Inoperable)) return;
+
+        }
+
+        private void ProcessWear()
+        {
+            if (!IsActive) return;
+
+            CurrentState = componentWear.GetWearState(CurrentState);
+        }
+
+        private void ProcessResources()
+        {
+            if (!IsActive) return;
+
+            foreach (ShipConsumableStorage storage in internalStorages)
+            {
+                if (storage.FlowDirection == ComponentFlowDirection.In)
+                {
+                    storage.AddToStorage();
+                }
+                else
+                {
+                    storage.RemoveFromStorage();
+                }
+            }
+        }
 
         #endregion
     }

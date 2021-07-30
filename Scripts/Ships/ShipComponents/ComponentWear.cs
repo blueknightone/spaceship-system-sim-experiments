@@ -9,16 +9,17 @@ using Godot;
 
 namespace BlueKnightOne.Ships.ShipComponents
 {
-    public class ComponentWearTimer : Timer
+    public class ComponentWear : Resource
     {
         [Export] private float startingWear;
         [Export] private float WearRatePerSecond;
         [Export] private float WornStateThreshold;
+        [Export] private float WornStateMultiplier;
         [Export] private float DamagedStateThreshold;
+        [Export] private float DamagedStateMultiplier;
         [Export] private float DestroyedStateThreshold;
 
-        public float GetCurrentWear => currentWear;
-        private float currentWear;
+        public float CurrentWear { get; private set; }
 
         /// <summary>
         ///     Updates the current wear value.
@@ -26,18 +27,18 @@ namespace BlueKnightOne.Ships.ShipComponents
         /// <param name="amount">Amount to set as current wear level.</param>
         public void SetWearLevel(float amount)
         {
-            currentWear = amount;
+            CurrentWear = amount;
         }
 
         public ShipComponentState GetWearState(ShipComponentState currentState)
         {
             if ((currentState & ShipComponentState.Inoperable) != 0) return currentState;
 
-            if (currentWear >= DestroyedStateThreshold)
+            if (CurrentWear >= DestroyedStateThreshold)
             {
                 return ShipComponentState.Destroyed;
             }
-            else if (currentWear >= DamagedStateThreshold)
+            else if (CurrentWear >= DamagedStateThreshold)
             {
                 return ShipComponentState.Damaged
                         | (
@@ -45,7 +46,7 @@ namespace BlueKnightOne.Ships.ShipComponents
                             & (ShipComponentState.Active | ShipComponentState.Inactive | ShipComponentState.Disabled)
                         );
             }
-            else if (currentWear >= WornStateThreshold)
+            else if (CurrentWear >= WornStateThreshold)
             {
                 return ShipComponentState.Worn
                         | (
@@ -57,17 +58,12 @@ namespace BlueKnightOne.Ships.ShipComponents
             return currentState;
         }
 
-        public void StartWear()
+        public void AddWear(float amountToAdd)
         {
-            this.Start();
+            CurrentWear += amountToAdd;
         }
 
-        public void StopWear()
-        {
-            this.Stop();
-        }
-
-        public void OnComponentWearTimeout()
+        public void OnComponentFunctionTimerTimeout()
         {
             UpdateWear();
         }
@@ -77,7 +73,7 @@ namespace BlueKnightOne.Ships.ShipComponents
         /// </summary>
         private void UpdateWear() 
         {
-            currentWear += WearRatePerSecond;
+            CurrentWear += WearRatePerSecond;
         }
     }
 }

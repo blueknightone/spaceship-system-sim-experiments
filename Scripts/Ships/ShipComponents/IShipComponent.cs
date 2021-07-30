@@ -6,6 +6,7 @@ Modified: 2021-07-29T23:36:15.023Z
 */
 using BlueKnightOne.Ships.ShipResources;
 using BlueKnightOne.Ships.ShipSystems;
+using Godot;
 
 namespace BlueKnightOne.Ships.ShipComponents
 {
@@ -14,18 +15,25 @@ namespace BlueKnightOne.Ships.ShipComponents
         #region Properties
         
         bool IsActive { get; }
+        ShipComponentState CurrentState { get; }
 
         #endregion
 
         #region Methods
 
-        void ActivateComponent();
-        void DeactivateComponent();
-        void ToggleComponent();
-        void ProcessResources();
-        float AddResourceToInternalStorage(ShipConsumableResource resource, float amounRequestedt);
-        bool CheckForResourceAvailable(ShipConsumableResource resource, float amountRequested = 0f);
-        float GetResourceFromInternalStorage(ShipConsumableResource resource, float amountRequested);
+        float AddResource(ShipConsumableResource resource, float amounRequestedt);
+        float GetResource(ShipConsumableResource resource, float amountRequested);
+        bool CheckResourceAvailability(ShipConsumableResource resource, float amountRequested = 0f);
+
+        void SetComponentState(ShipComponentState nextState, bool overwriteState);
+        void Activate();
+        void Deactivate();
+        void Toggle();
+        void Damage(float wearAmount);
+        void Destroy();
+        void Remove();
+        void Install();
+        void ToggleOverclock();
 
         #endregion
     }

@@ -20,7 +20,7 @@ namespace BlueKnightOne.Ships.ShipComponents
         ReducedFunction = Active | Worn,
         SeverelyReducedFunction = Active | Damaged,
         Destroyed = 1 << 4,
-        Missing = 1 << 5,
+        Uninstalled = 1 << 5,
         Disabled = 1 << 6,
         /// <summary>
         ///     When activated, component produces more of a resource at the cost of additional where.
@@ -29,6 +29,6 @@ namespace BlueKnightOne.Ships.ShipComponents
         /// <summary>
         ///     Can't be activated.
         /// </summary>
-        Inoperable = Destroyed | Missing | Disabled
+        Inoperable = Destroyed | Uninstalled | Disabled
     }
 }
